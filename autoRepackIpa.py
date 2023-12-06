@@ -14,7 +14,13 @@ import zipfile
 # Config & Settings & Const
 ################################################################################
 
-mainDelimiter = "="*20
+mainDelimiter = "="*30
+subDelimiter = "-"*30
+
+# newIpaNamePart = "restoredSymbols"
+newIpaNamePart = "idaAllSymbols"
+
+isDeleteRepackIpaFolderAfterDone = True
 
 ################################################################################
 # Util Function
@@ -151,6 +157,28 @@ def zipFolder(toZipFolder, outputZipFile):
         zipFp.write(curFilePath, arcname=fileRelativePath)
   print("Completed zip file %s" % outputZipFile)
 
+
+def findAppFolder(rootFolder):
+  """
+    Find xxx.app folder full path under root folder
+  """
+  appFolerPath = None
+  for dirpath, dirnames, filenames in os.walk(rootFolder):
+    # print("%s" % ("-"*80))
+    # print("dirpath=%s, dirnames=%s, filenames=%s" % (dirpath, dirnames, filenames))
+    for curDirName in dirnames:
+      # print("curDirName=%s" % curDirName)
+      if curDirName.endswith(".app"):
+        curFolderPath = os.path.join(dirpath, curDirName)
+        # print("curFolderPath=%s" % curFolderPath)
+        appFolerPath = os.path.abspath(curFolderPath)
+        # print("appFolerPath=%s" % appFolerPath)
+        # appFolerPath=/Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app
+        return appFolerPath
+
+  return appFolerPath
+
+
 ################################################################################
 # Main
 ################################################################################
@@ -158,170 +186,140 @@ def zipFolder(toZipFolder, outputZipFile):
 if __name__ == "__main__":
   curDateStr = getCurDatetimeStr("%Y%m%d")
   print("curDateStr=%s" % curDateStr)
-  whatsappVersionStr = "v23.20.79"
 
   newParser = argparse.ArgumentParser()
-  # newParser.add_argument("-m", "--macho-file", type=str, dest="machoFile", default=None, help="Mach-O file")
-  # newParser.add_argument("-s", "--symbol-file", type=str, dest="symbolFile", default=None, help="symbol file to restore")
+  newParser.add_argument("-i", "--input-ipa-file", type=str, dest="inputIpaFile", default=None, required=True, help="Input IPA file full path")
   newParser.add_argument("-o", "--output-ipa-file", type=str, dest="outputIpaFile", default=None, help="Output repacked IPA file")
+  newParser.add_argument("-r", "--restore-symbol", type=str, dest="restoreSymbol", default="restore-symbol", help="restore-symbol exectuable full path. Default: restore-symbol")
+  newParser.add_argument("-l", "--symbol-list", type=str, dest="symbolList", default=[], nargs="+", action='append', help="Symbol list restore, support multiple item to to list, single item format: {machoFileInIpa}={JsonSymbolFile}")
   args = newParser.parse_args()
   print("%s Parsing input arguments %s" % (mainDelimiter , mainDelimiter))
 
-  # for debug
-  # args.machoFile = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/input/WhatsApp"
-  # args.symbolFile = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/mergeSymbols/output/WhatsApp_mergedSymbols_20231121_102056.json"
-
-  # symbolFilename_WhatsApp = "WhatsApp_IDASymbols_FunctionsNames_20231126_171758.json"
-  # symbolFilename_WhatsApp = "WhatsApp_IDASymbols_FunctionsNames_20231128_213634.json"
-  # symbolFilename_SharedModules = "SharedModules_IDASymbols_FunctionsNames_20231128_214111.json"
-  # symbolFilename_WhatsApp = "WhatsApp_IDASymbols_FunctionsNames_20231129_223621.json"
-  # symbolFilename_SharedModules = "SharedModules_IDASymbols_FunctionsNames_20231129_224249.json"
-  symbolFilename_WhatsApp = "WhatsApp_IDASymbols_FunctionsNames_20231205_220128.json"
-  symbolFilename_SharedModules = "SharedModules_IDASymbols_FunctionsNames_20231205_220317.json"
-
   print("args=%s" % args)
-  # machoFile = args.machoFile
-  # print("machoFile=%s" % machoFile)
-  # symbolFile = args.symbolFile
-  # print("symbolFile=%s" % symbolFile)
+  restoreSymbol = args.restoreSymbol
+  print("restoreSymbol=%s" % restoreSymbol)
+
+  inputIpaFile = args.inputIpaFile
+  print("inputIpaFile=%s" % inputIpaFile)
+  if inputIpaFile:
+    # for workaround VSCode launch.json args bug: redundant preceding space
+    inputIpaFile = inputIpaFile.strip()
+
+  ipaFilePath = os.path.dirname(inputIpaFile)
+  print("ipaFilePath=%s" % ipaFilePath)
+  ipaFilename = os.path.basename(inputIpaFile)
+  print("ipaFilename=%s" % ipaFilename)
+
   outputIpaFile = args.outputIpaFile
+  ipaFilenameOnly = None
+  if not outputIpaFile:
+    ipaFilenameOnly, ipaExt = os.path.splitext(ipaFilename)
+    print("ipaFilenameOnly=%s, ipaExt=%s" % (ipaFilenameOnly, ipaExt))
+    newIpaFilename = "%s_%s_%s%s" % (ipaFilenameOnly, newIpaNamePart, curDateStr, ipaExt)
+    print("newIpaFilename=%s" % newIpaFilename)
+    outputIpaFile = os.path.join(ipaFilePath, newIpaFilename)
   print("outputIpaFile=%s" % outputIpaFile)
 
+  print("%s Unzip %s %s" % (mainDelimiter, ipaFilename, mainDelimiter))
+  unzipOutputFolderName = "forRepackIpa_%s_%s" % (ipaFilenameOnly, curDateStr)
+  print("unzipOutputFolderName=%s" % unzipOutputFolderName)
+  unzipOutputFullPath = os.path.join(ipaFilePath, unzipOutputFolderName)
+  print("unzipOutputFullPath=%s" % unzipOutputFullPath)
 
-  # machoFilename = os.path.basename(machoFile)
-  # print("machoFilename=%s" % machoFilename)
+  # delete if existe foler
+  deleteFolder(unzipOutputFullPath)
 
-  if not outputIpaFile:
-    # outputIpaFile = "%s_%s.ipa" % (machoFilename, curDateStr)
-    outputIpaFile = "WhatsApp_%s_%s.ipa" % (whatsappVersionStr, curDateStr)
-    print("outputIpaFile=%s" % outputIpaFile)
-
-  # common part
-  symbolFolder = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output"
-
-  restoreSymbolExec ="/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol"
-
-  # ==================== WhatsApp ====================
-  print("%s restore-symbol + resign for WhatsApp %s" % (mainDelimiter , mainDelimiter))
-  machoFullPath_WhatsApp = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/input/WhatsApp"
-  restoredFilename_WhatsApp = "WhatsApp_mergedSymbols_%s" % curDateStr
-  print("restoredFilename_WhatsApp=%s" % restoredFilename_WhatsApp)
-  restoredOutputFolder_WhatsApp = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output"
-  print("restoredOutputFolder_WhatsApp=%s" % restoredOutputFolder_WhatsApp)
-  restoredFullPath_WhatsApp = os.path.join(restoredOutputFolder_WhatsApp, restoredFilename_WhatsApp)
-  print("restoredFullPath_WhatsApp=%s" % restoredFullPath_WhatsApp)
-  symbolFullPath_WhatsApp = os.path.join(symbolFolder, symbolFilename_WhatsApp)
-  print("symbolFullPath_WhatsApp=%s" % symbolFullPath_WhatsApp)
-
-  # call restore-symbol
-  restoreSymbolCmd = "%s -w true -s false -j %s -o %s %s" % (restoreSymbolExec, symbolFullPath_WhatsApp, restoredFullPath_WhatsApp, machoFullPath_WhatsApp)
-  print("restoreSymbolCmd=%s" % restoreSymbolCmd)
-  # /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol -s false -j /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/mergeSymbols/output/WhatsApp_mergedSymbols_20231121_102056.json -o /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output/WhatsApp_mergedSymbols_20231121 /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/input/WhatsApp
-  isRestoreOk, errMsg = runCommand(restoreSymbolCmd)
-  if not isRestoreOk:
-    print("isRestoreOk=%s, errMsg=%s" % (isRestoreOk, errMsg))
-    exit(1)
-
-  # do resign
-  # copy for resign
-  copySrc_WhatsApp = restoredFullPath_WhatsApp
-  resignFilename_WhatsApp = "%s_resigned" % restoredFilename_WhatsApp
-  copyDest_WhatsApp = os.path.join(restoredOutputFolder_WhatsApp, resignFilename_WhatsApp)
-  cpCmd = "cp %s %s" % (copySrc_WhatsApp, copyDest_WhatsApp)
-  print("cpCmd=%s" % cpCmd)
-  isCpResignOk, errMsg = runCommand(cpCmd)
-  if not isCpResignOk:
-    print("isCpResignOk=%s, errMsg=%s" % (isCpResignOk, errMsg))
-    exit(1)
-
-  # call codesign
-  entitlementFilename_WhatsApp = "WhatsApp_entitlements.xml"
-  entitlementFolder_WhatsApp = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output"
-  entitlementFullPath_WhatsApp = os.path.join(entitlementFolder_WhatsApp, entitlementFilename_WhatsApp)
-  resignedFullPath_WhatsApp = copyDest_WhatsApp
-  codesignCmd = "codesign --force --sign - --entitlements %s --timestamp=none --generate-entitlement-der %s" % (entitlementFullPath_WhatsApp, resignedFullPath_WhatsApp)
-  print("codesignCmd=%s" % codesignCmd)
-  # codesignCmd=codesign --force --sign - --entitlements /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output/WhatsApp_entitlements.xml --timestamp=none --generate-entitlement-der /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output/WhatsApp_mergedSymbols_20231128_resigned
-  isCodesignOk, errMsg = runCommand(codesignCmd)
-  if not isCodesignOk:
-    print("isCodesignOk=%s, errMsg=%s" % (isCodesignOk, errMsg))
-    exit(1)
-
-  # ==================== SharedModules ====================
-  print("%s restore-symbol + resign for SharedModules %s" % (mainDelimiter , mainDelimiter))
-
-  machoFullPath_SharedModules = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/SharedModules/input/SharedModules"
-  restoredFilename_SharedModules = "SharedModules_mergedSymbols_%s" % curDateStr
-  print("restoredFilename_SharedModules=%s" % restoredFilename_SharedModules)
-  restoredOutputFolder_SharedModules = "/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/SharedModules/output"
-  print("restoredOutputFolder_SharedModules=%s" % restoredOutputFolder_SharedModules)
-  restoredFullPath_SharedModules = os.path.join(restoredOutputFolder_SharedModules, restoredFilename_SharedModules)
-  print("restoredFullPath_SharedModules=%s" % restoredFullPath_SharedModules)
-  symbolFullPath_SharedModules = os.path.join(symbolFolder, symbolFilename_SharedModules)
-  print("symbolFullPath_SharedModules=%s" % symbolFullPath_SharedModules)
-
-  # call restore-symbol
-  restoreSymbolCmd = "%s -w true -s false -j %s -o %s %s" % (restoreSymbolExec, symbolFullPath_SharedModules, restoredFullPath_SharedModules, machoFullPath_SharedModules)
-  print("restoreSymbolCmd=%s" % restoreSymbolCmd)
-  # /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol -s false -j /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/mergeSymbols/output/WhatsApp_mergedSymbols_20231121_102056.json -o /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/output/WhatsApp_mergedSymbols_20231121 /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/WhatsApp/input/WhatsApp
-  isRestoreOk, errMsg = runCommand(restoreSymbolCmd)
-  if not isRestoreOk:
-    print("isRestoreOk=%s, errMsg=%s" % (isRestoreOk, errMsg))
-    exit(1)
-
-  # do resign
-  # copy for resign
-  copySrc_SharedModules = restoredFullPath_SharedModules
-  resignFilename_SharedModules = "%s_resigned" % restoredFilename_SharedModules
-  copyDest_SharedModules = os.path.join(restoredOutputFolder_SharedModules, resignFilename_SharedModules)
-  cpCmd = "cp %s %s" % (copySrc_SharedModules, copyDest_SharedModules)
-  print("cpCmd=%s" % cpCmd)
-  isCpResignOk, errMsg = runCommand(cpCmd)
-  if not isCpResignOk:
-    print("isCpResignOk=%s, errMsg=%s" % (isCpResignOk, errMsg))
-    exit(1)
-
-  # call codesign
-  resignedFullPath_SharedModules = copyDest_SharedModules
-  codesignCmd = "codesign --force --sign - --timestamp=none --generate-entitlement-der %s" % resignedFullPath_SharedModules
-  print("codesignCmd=%s" % codesignCmd)
-  # /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol -s false -j /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231128_214111.json -o /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/SharedModules/output/SharedModules_mergedSymbols_20231128 /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/test/SharedModules/input/SharedModules
-  isCodesignOk, errMsg = runCommand(codesignCmd)
-  if not isCodesignOk:
-    print("isCodesignOk=%s, errMsg=%s" % (isCodesignOk, errMsg))
-    exit(1)
-
-  # unzip ipa
-  origWhatsappIpaFilename = "WhatsApp_%s.ipa" % whatsappVersionStr
-  origWhatsappIpaFolder = "/Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa"
-  origWhatsappIpaFullPath = os.path.join(origWhatsappIpaFolder, origWhatsappIpaFilename)
-  unzipOutputFolderName = "forRepackIpa_%s" % curDateStr
-  unzipOutputFullPath = os.path.join(origWhatsappIpaFolder, unzipOutputFolderName)
   createFolder(unzipOutputFullPath)
-  unzipFile(origWhatsappIpaFullPath, unzipOutputFullPath)
+  print("Created unzip foler: %s" % unzipOutputFullPath)
+  unzipFile(inputIpaFile, unzipOutputFullPath)
 
-  # replace with resigned file
-  unzipedFullPath_WhatsApp = os.path.join(unzipOutputFullPath, "Payload/WhatsApp.app/WhatsApp")
-  cpCmd_WhatsApp = "cp %s %s" % (copyDest_WhatsApp, unzipedFullPath_WhatsApp)
-  print("cpCmd_WhatsApp=%s" % cpCmd_WhatsApp)
-  isCpOk_WhatsApp, errMsg = runCommand(cpCmd_WhatsApp)
-  if not isCpOk_WhatsApp:
-    print("isCpOk_WhatsApp=%s, errMsg=%s" % (isCpOk_WhatsApp, errMsg))
-    exit(1)
+  # find out xxx.app
+  appFolderFullPath = findAppFolder(unzipOutputFullPath)
+  print("appFolderFullPath=%s" % appFolderFullPath)
+  appFolderName = os.path.basename(appFolderFullPath)
+  print("appFolderName=%s" % appFolderName)
 
-  unzipedFullPath_SharedModules = os.path.join(unzipOutputFullPath, "Payload/WhatsApp.app/Frameworks/SharedModules.framework/SharedModules")
-  cpCmd_SharedModules = "cp %s %s" % (copyDest_SharedModules, unzipedFullPath_SharedModules)
-  print("cpCmd_SharedModules=%s" % cpCmd_SharedModules)
-  isCpOk_SharedModules, errMsg = runCommand(cpCmd_SharedModules)
-  if not isCpOk_SharedModules:
-    print("isCpOk_SharedModules=%s, errMsg=%s" % (isCpOk_SharedModules, errMsg))
-    exit(1)
+  # create tmp foler for later use
+  tmpFolderPath = os.path.join(unzipOutputFullPath, "tmp")
+  print("tmpFolderPath=%s" % tmpFolderPath)
+  createFolder(tmpFolderPath)
+  print("Created tmp foler: %s" % tmpFolderPath)
+
+  symbolList = args.symbolList
+  print("symbolList=%s" % symbolList)
+  for curNum, eachSymbolList in enumerate(symbolList, start=1):
+    eachSymbol = eachSymbolList[0]
+    splitList = eachSymbol.split("=")
+    # print("splitList=%s" % splitList)
+    machoFileInIpa = splitList[0]
+    machoFilename = os.path.basename(machoFileInIpa)
+    print("%s [%d] %s %s" % (subDelimiter, curNum, machoFilename, subDelimiter))
+    print("machoFileInIpa=%s" % machoFileInIpa)
+    symbolFullPath = splitList[1]
+    print("symbolFullPath=%s" % symbolFullPath)
+    if not os.path.isfile(symbolFullPath):
+      print("Not existed symbol file: %s" % symbolFullPath)
+      exit(1)
+
+    machoFullPath = os.path.join(appFolderFullPath, machoFileInIpa)
+    print("machoFullPath=%s" % machoFullPath)
+    if not os.path.isfile(machoFullPath):
+      print("Not existed Mach-O file: %s" % machoFullPath)
+      exit(1)
+    
+    hasEntitlement = False
+
+    print("%s Extract entitlement using ldid %s" % (mainDelimiter, mainDelimiter))
+    entitlementFile = "%s_entitlements.xml" % machoFilename
+    print("entitlementFile=%s" % entitlementFile)
+    entitlementFullPath = os.path.join(tmpFolderPath, entitlementFile)
+    print("entitlementFullPath=%s" % entitlementFullPath)
+    ldldCmd = "ldid -e %s > %s" % (machoFullPath, entitlementFullPath)
+    # ldid -e WhatsApp_mergedSymbols_20231117 > WhatsApp_mergedSymbols_20231117_entitlements.xml
+    print("ldldCmd=%s" % ldldCmd)
+    isLdidOk, errMsg = runCommand(ldldCmd)
+    if not isLdidOk:
+      print("isLdidOk=%s, errMsg=%s" % (isLdidOk, errMsg))
+      exit(1)
+
+    entitlementFileSize = os.path.getsize(entitlementFullPath)
+    print("entitlementFileSize=%s" % entitlementFileSize)
+    if entitlementFileSize > 0:
+      hasEntitlement = True
+    print("hasEntitlement=%s" % hasEntitlement)
+
+    print("%s Restore symbol using restore-symbol %s" % (mainDelimiter, mainDelimiter))
+    restoreSymbolCmd = "%s -w true -s false -j %s -o %s %s" % (restoreSymbol, symbolFullPath, machoFullPath, machoFullPath)
+    print("restoreSymbolCmd=%s" % restoreSymbolCmd)
+    # restoreSymbolCmd=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol -w true -s false -j /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231205_220128.json -o /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp
+    isRestoreOk, errMsg = runCommand(restoreSymbolCmd)
+    if not isRestoreOk:
+      print("isRestoreOk=%s, errMsg=%s" % (isRestoreOk, errMsg))
+      exit(1)
+
+    print("%s Resign using codesign %s" % (mainDelimiter, mainDelimiter))
+    entitlementPart = ""
+    if hasEntitlement:
+      entitlementPart = "--entitlements %s" % entitlementFullPath
+    codesignCmd = "codesign --force --sign - %s --timestamp=none --generate-entitlement-der %s" % (entitlementPart, machoFullPath)
+    print("codesignCmd=%s" % codesignCmd)
+    # codesignCmd=codesign --force --sign - --entitlements /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/tmp/WhatsApp_entitlements.xml --timestamp=none --generate-entitlement-der /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp
+    isCodesignOk, errMsg = runCommand(codesignCmd)
+    if not isCodesignOk:
+      print("isCodesignOk=%s, errMsg=%s" % (isCodesignOk, errMsg))
+      exit(1)
+  
+  # remove tmp folder
+  deleteFolder(tmpFolderPath)
+  # print("Deleted tmp foler: %s" % tmpFolderPath)
 
   # zip folder
-  outputZipFilename = "WhatsApp_%s_idaAllSymbols_%s.ipa" % (whatsappVersionStr, curDateStr)
-  outputZipFullPath = os.path.join(origWhatsappIpaFolder, outputZipFilename)
-  zipFolder(unzipOutputFullPath, outputZipFullPath)
+  outputIpaFilename = "%s_%s_%s.ipa" % (ipaFilenameOnly, newIpaNamePart, curDateStr)
+  print("outputIpaFilename=%s" % outputIpaFilename)
+  outputIpaFullPath = os.path.join(ipaFilePath, outputIpaFilename)
+  print("outputIpaFullPath=%s" % outputIpaFullPath)
+  zipFolder(unzipOutputFullPath, outputIpaFullPath)
 
-  # do clean work
-  # remove forRepackIpa folder
-  deleteFolder(unzipOutputFullPath)
+  if isDeleteRepackIpaFolderAfterDone:
+    deleteFolder(unzipOutputFullPath)
+    # print("Deleted unzip foler: %s" % unzipOutputFullPath)
