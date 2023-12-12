@@ -1,11 +1,12 @@
 # AutoRepackIpa
 
-* Update: `20231206`
+* Update: `20231212`
 
 Python script to automate the whole process for repack ipa file:
 
 * (1) Unzip origin ipa
 * (2) Extract entitlement using ldid
+  * [x] auto edit entitlement file to make app debuggable
 * (3) Restore symbol using restore-symbol
 * (4) Resign using codesign
 * (5) Zip whole folder to ipa file
@@ -16,7 +17,7 @@ Python script to automate the whole process for repack ipa file:
 
 #### WhatsApp
 
-* run command
+* designate restore-symbol
   ```bash
   python autoRepackIpa.py -i /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/WhatsApp_v23.20.79.ipa --restore-symbol=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol --symbol-list=WhatsApp=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231206_114323.json --symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231206_114423.json
   ```
@@ -33,6 +34,10 @@ Python script to automate the whole process for repack ipa file:
 * output
   * `WhatsApp_v23.20.79_idaAllSymbols_20231206.ipa`
     * ![auto_repack_ipa_whatsapp](assets/img/auto_repack_ipa_whatsapp_cmd.jpg)
+* use default restore-symbol
+  ```bash
+  python autoRepackIpa.py -i /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/WhatsApp_v23.20.79.ipa --restore-symbol=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/restore-symbol --symbol-list=WhatsApp=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231211_094245.json --symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231211_094419.json
+  ```
 
 ## Help syntax
 
@@ -56,6 +61,5 @@ options:
 ## TODO
 
 * [ ] add more arg: `-b`=`--enable-restore-objc-symbol`, while pass in: "--symbol-list=WhatsApp=" or "--symbol-list=Frameworks/SharedModules.framework/SharedModules=" for no json symbol file
-* [ ] auto edit entitlement file to make app debuggable
 * [ ] after shell run IDA export symbol, add to here, then all step can automate do it
 * [ ] uninstall app in iPhone, then reinstall new ipa to iPhone

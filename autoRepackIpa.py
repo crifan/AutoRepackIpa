@@ -1,7 +1,9 @@
 # Function: Auto repack ipa file
 # Author: Crifan Li
-# Update: 20231205
+# Update: 20231212
 
+import codecs
+import re
 import os
 from datetime import datetime,timedelta
 from datetime import time  as datetimeTime
@@ -25,6 +27,20 @@ isDeleteRepackIpaFolderAfterDone = True
 ################################################################################
 # Util Function
 ################################################################################
+
+def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
+  """load file text content from file"""
+  with codecs.open(fullFilename, 'r', encoding=fileEncoding) as fp:
+    allText = fp.read()
+    # logging.debug("Complete load text from %s", fullFilename)
+    return allText
+
+def saveTextToFile(fullFilename, text, fileEncoding="utf-8"):
+  """save text content into file"""
+  with codecs.open(fullFilename, 'w', encoding=fileEncoding) as fp:
+    fp.write(text)
+    fp.close()
+
 
 def datetimeToStr(inputDatetime, format="%Y%m%d_%H%M%S"):
   """Convert datetime to string
@@ -178,6 +194,72 @@ def findAppFolder(rootFolder):
 
   return appFolerPath
 
+def processEntitlementBoolKeyValue(keyName, entitlementXmlStr):
+  """
+  eg:
+    get-task-allow
+      if existed, but false -> replace to true
+      if not existed -> add it
+      if found and already true -> do nothing
+      => final to:
+        <key>get-task-allow</key>
+        <true/>
+  """
+  newEntitlementXmlStr = entitlementXmlStr
+
+  keyTrueStrTemplate = """<key>%s</key>
+	<true/>"""
+  # print("keyTrueStrTemplate=%s" % keyTrueStrTemplate)
+  keyTrueStr = keyTrueStrTemplate.replace("%s", keyName)
+  # print("keyTrueStr=%s" % keyTrueStr)
+  keyValuePattern = "<key>\s*%s\s*</key>.+?<(?P<keyValue>\w+)/>" % keyName
+  # print("keyValuePattern=%s" % keyValuePattern)
+
+  keyValueMatch = re.search(keyValuePattern, entitlementXmlStr, re.DOTALL)
+  print("keyValueMatch=%s" % keyValueMatch)
+  if keyValueMatch:
+    # exist: no action or replace to true
+    keyValue = keyValueMatch.group("keyValue")
+    # print("keyValue=%s" % keyValue)
+    keyValueLower = keyValue.lower()
+    # print("keyValueLower=%s" % keyValueLower)
+    if keyValueLower == "true":
+      # do nothing
+      print("Already: %s" % keyTrueStr)
+    elif keyValueLower == "false":
+      # replace valeu to true
+      matchStart = keyValueMatch.start()
+      # print("matchStart=%s" % matchStart)
+      matchEnd = keyValueMatch.end()
+      # print("matchEnd=%s" % matchEnd)
+      matchedStr = entitlementXmlStr[matchStart:matchEnd]
+      # print("matchedStr=%s" % matchedStr)
+      # replace it
+      newEntitlementXmlStr = re.sub(matchedStr, keyTrueStr, entitlementXmlStr)
+      # print("newEntitlementXmlStr=%s" % newEntitlementXmlStr)
+  else:
+    # no exist, insert to end
+    """
+    </dict>
+    </plist>
+    """
+    endDictPlistMatch = re.search("</dict>.+?</plist>$", entitlementXmlStr, re.DOTALL)
+    # print("endDictPlistMatch=%s" % endDictPlistMatch)
+    matchStart = endDictPlistMatch.start()
+    # print("matchStart=%s" % matchStart)
+    matchEnd = endDictPlistMatch.end()
+    # print("matchEnd=%s" % matchEnd)
+    matchedStr = entitlementXmlStr[matchStart:matchEnd]
+    # print("matchedStr=%s" % matchedStr)
+    keyTrueAndEndStr = "\t%s\n%s" % (keyTrueStr, matchedStr)
+    # print("keyTrueAndEndStr=%s" % keyTrueAndEndStr)
+    newEntitlementXmlStr = re.sub(matchedStr, keyTrueAndEndStr, entitlementXmlStr)
+
+  print("newEntitlementXmlStr=%s" % newEntitlementXmlStr)
+  return newEntitlementXmlStr
+
+
+
 
 ################################################################################
 # Main
@@ -192,12 +274,15 @@ if __name__ == "__main__":
   newParser.add_argument("-o", "--output-ipa-file", type=str, dest="outputIpaFile", default=None, help="Output repacked IPA file")
   newParser.add_argument("-r", "--restore-symbol", type=str, dest="restoreSymbol", default="restore-symbol", help="restore-symbol exectuable full path. Default: restore-symbol")
   newParser.add_argument("-l", "--symbol-list", type=str, dest="symbolList", default=[], nargs="+", action='append', help="Symbol list restore, support multiple item to to list, single item format: {machoFileInIpa}={JsonSymbolFile}")
+  newParser.add_argument("-d", "--is-add-debuggable", type=bool, dest="isAddDebuggable", default=True, help="Enable/Disable to auto edit entitlement file to add debuggable (get-task-allow, task_for_pid-allow, run-unsigned-code)")
   args = newParser.parse_args()
   print("%s Parsing input arguments %s" % (mainDelimiter , mainDelimiter))
 
   print("args=%s" % args)
   restoreSymbol = args.restoreSymbol
   print("restoreSymbol=%s" % restoreSymbol)
+  isAddDebuggable = args.isAddDebuggable
+  print("isAddDebuggable=%s" % isAddDebuggable)
 
   inputIpaFile = args.inputIpaFile
   print("inputIpaFile=%s" % inputIpaFile)
@@ -287,6 +372,31 @@ if __name__ == "__main__":
     if entitlementFileSize > 0:
       hasEntitlement = True
     print("hasEntitlement=%s" % hasEntitlement)
+
+    if hasEntitlement:
+      if isAddDebuggable:
+        entitlementXml = loadTextFromFile(entitlementFullPath)
+        print("entitlementXml=%s" % entitlementXml)
+        newEntitlementXml = entitlementXml
+        """
+          <key>get-task-allow</key>
+          <true/>
+          <key>task_for_pid-allow</key>
+          <true/>
+          <key>run-unsigned-code</key>
+          <true/>
+        """
+        newEntitlementXml = processEntitlementBoolKeyValue("get-task-allow", newEntitlementXml)
+        newEntitlementXml = processEntitlementBoolKeyValue("task_for_pid-allow", newEntitlementXml)
+        newEntitlementXml = processEntitlementBoolKeyValue("run-unsigned-code", newEntitlementXml)
+        print("newEntitlementXml=%s" % newEntitlementXml)
+        # writeback
+        debuggableEntitlementFile = "%s_entitlements_debuggable.xml" % machoFilename
+        print("debuggableEntitlementFile=%s" % debuggableEntitlementFile)
+        debuggableEntitlementFullPath = os.path.join(tmpFolderPath, debuggableEntitlementFile)
+        print("debuggableEntitlementFullPath=%s" % debuggableEntitlementFullPath)
+        saveTextToFile(debuggableEntitlementFullPath, newEntitlementXml)
+        entitlementFullPath = debuggableEntitlementFullPath
 
     print("%s Restore symbol using restore-symbol %s" % (mainDelimiter, mainDelimiter))
     restoreSymbolCmd = "%s -w true -s false -j %s -o %s %s" % (restoreSymbol, symbolFullPath, machoFullPath, machoFullPath)
