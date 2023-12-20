@@ -1,6 +1,6 @@
 # AutoRepackIpa
 
-* Update: `20231212`
+* Update: `20231220`
 
 Python script to automate the whole process for repack ipa file:
 
@@ -36,7 +36,9 @@ Python script to automate the whole process for repack ipa file:
     * ![auto_repack_ipa_whatsapp](assets/img/auto_repack_ipa_whatsapp_cmd.jpg)
 * use default restore-symbol
   ```bash
-  python autoRepackIpa.py -i /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/WhatsApp_v23.20.79.ipa --restore-symbol=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/restore-symbol --symbol-list=WhatsApp=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231211_094245.json --symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231211_094419.json
+  python autoRepackIpa.py -i /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/WhatsApp_v23.20.79.ipa --symbol-list=WhatsApp=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231211_094245.json --symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231211_094419.json
+
+  python autoRepackIpa.py -i /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/WhatsApp_v23.20.79.ipa --symbol-list=WhatsApp=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231220_094317.json --symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_root/crifan/github/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231220_094232.json
   ```
 
 ## Help syntax
