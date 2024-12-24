@@ -1,6 +1,6 @@
 # AutoRepackIpa
 
-* Update: `20240124`
+* Update: `20241224`
 
 Python script to automate the whole process for repack ipa file:
 
@@ -25,12 +25,15 @@ Python script to automate the whole process for repack ipa file:
     * input ipa file
   * `--restore-symbol=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol`
     * restore-symbol executable file
-  * `--symbol-list=WhatsApp=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231206_114323.json`
-    * machoFileInIpa=`WhatsApp`
-    * JsonSymbolFile=`/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231206_114323.json`
-  * `--symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231206_114423.json`
-    * machoFileInIpa=`Frameworks/SharedModules.framework/SharedModules`
-    * JsonSymbolFile=`/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231206_114423.json`
+  * for `--symbol-list`
+    * `--symbol-list=WhatsApp=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231206_114323.json`
+      * machoFileInIpa=`WhatsApp`
+      * JsonSymbolFile=`/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231206_114323.json`
+    * `--symbol-list=Frameworks/SharedModules.framework/SharedModules=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231206_114423.json`
+      * machoFileInIpa=`Frameworks/SharedModules.framework/SharedModules`
+      * JsonSymbolFile=`/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/SharedModules_IDASymbols_FunctionsNames_20231206_114423.json`
+    * Note:
+      * if Mach-O filename contain space, eg `xxx yyy`, then should add quote, like: `--symbol-list="xxx yyy"=/zzz/aaa.json`
 * output
   * `WhatsApp_v23.20.79_idaAllSymbols_20231206.ipa`
     * ![auto_repack_ipa_whatsapp](assets/img/auto_repack_ipa_whatsapp_cmd.jpg)

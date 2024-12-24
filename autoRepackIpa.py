@@ -1,6 +1,6 @@
 # Function: Auto repack ipa file
 # Author: Crifan Li
-# Update: 20231212
+# Update: 20241224
 
 import codecs
 import re
@@ -359,7 +359,7 @@ if __name__ == "__main__":
     print("entitlementFile=%s" % entitlementFile)
     entitlementFullPath = os.path.join(tmpFolderPath, entitlementFile)
     print("entitlementFullPath=%s" % entitlementFullPath)
-    ldldCmd = "ldid -e %s > %s" % (machoFullPath, entitlementFullPath)
+    ldldCmd = """ldid -e "%s" > "%s" """ % (machoFullPath, entitlementFullPath)
     # ldid -e WhatsApp_mergedSymbols_20231117 > WhatsApp_mergedSymbols_20231117_entitlements.xml
     print("ldldCmd=%s" % ldldCmd)
     isLdidOk, errMsg = runCommand(ldldCmd)
@@ -399,7 +399,7 @@ if __name__ == "__main__":
         entitlementFullPath = debuggableEntitlementFullPath
 
     print("%s Restore symbol using restore-symbol %s" % (mainDelimiter, mainDelimiter))
-    restoreSymbolCmd = "%s -w true -s false -j %s -o %s %s" % (restoreSymbol, symbolFullPath, machoFullPath, machoFullPath)
+    restoreSymbolCmd = """ %s -w true -s false -j "%s" -o "%s" "%s" """ % (restoreSymbol, symbolFullPath, machoFullPath, machoFullPath)
     print("restoreSymbolCmd=%s" % restoreSymbolCmd)
     # restoreSymbolCmd=/Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/restore-symbol -w true -s false -j /Users/crifan/dev/dev_src/ios_reverse/symbol/restore-symbol/crifan/restore-symbol/tools/IDAScripts/export_ida_symbol/output/WhatsApp_IDASymbols_FunctionsNames_20231205_220128.json -o /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp
     isRestoreOk, errMsg = runCommand(restoreSymbolCmd)
@@ -410,8 +410,8 @@ if __name__ == "__main__":
     print("%s Resign using codesign %s" % (mainDelimiter, mainDelimiter))
     entitlementPart = ""
     if hasEntitlement:
-      entitlementPart = "--entitlements %s" % entitlementFullPath
-    codesignCmd = "codesign --force --sign - %s --timestamp=none --generate-entitlement-der %s" % (entitlementPart, machoFullPath)
+      entitlementPart = """--entitlements "%s" """ % entitlementFullPath
+    codesignCmd = """codesign --force --sign - %s --timestamp=none --generate-entitlement-der "%s" """ % (entitlementPart, machoFullPath)
     print("codesignCmd=%s" % codesignCmd)
     # codesignCmd=codesign --force --sign - --entitlements /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/tmp/WhatsApp_entitlements.xml --timestamp=none --generate-entitlement-der /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/forRepackIpa_WhatsApp_v23.20.79_20231206/Payload/WhatsApp.app/WhatsApp
     isCodesignOk, errMsg = runCommand(codesignCmd)
